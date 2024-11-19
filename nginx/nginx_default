@@ -23,18 +23,47 @@ server {
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
+
+        client_max_body_size 50M;
+        proxy_buffering off;
+
     }
-
-    # Proxy for web_video_server
     location /video/ {
-        proxy_pass http://localhost:8080;  # Forward to web_video_server
-        proxy_http_version 1.1;
+    proxy_pass http://localhost:8080/;
+    proxy_http_version 1.1;
 
-        # Proxy headers
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
+    # Proxy headers
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+
+    # Disable buffering for real-time streaming
+    proxy_buffering off;
+    client_max_body_size 50M;
+
+    # Add CORS headers
+    add_header 'Access-Control-Allow-Origin' '*' always;
+    add_header 'Access-Control-Allow-Methods' 'GET, POST, OPTIONS' always;
+    add_header 'Access-Control-Allow-Headers' 'Authorization, Content-Type, X-Requested-With' always;
+
+    # Prevent duplicate headers from upstream server
+    proxy_hide_header 'Access-Control-Allow-Origin';
+    proxy_hide_header 'Access-Control-Allow-Methods';
+    proxy_hide_header 'Access-Control-Allow-Headers';
+
+    # Authentication
+    auth_basic "Restricted Access";
+    auth_basic_user_file /etc/nginx/.htpasswd;
+
+    # Handle OPTIONS method for CORS preflight
+    if ($request_method = OPTIONS) {
+        add_header 'Access-Control-Allow-Origin' '*';
+        add_header 'Access-Control-Allow-Methods' 'GET, POST, OPTIONS';
+        add_header 'Access-Control-Allow-Headers' 'Authorization, Content-Type, X-Requested-With';
+        add_header 'Content-Length' 0;
+        add_header 'Content-Type' text/plain;
+        return 204;  # No Content
     }
 }
-
+}

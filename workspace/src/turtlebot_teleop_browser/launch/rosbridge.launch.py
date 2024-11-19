@@ -30,13 +30,15 @@ def generate_launch_description():
                 ('out', '/oakd/rgb/preview/image_raw/decompressed')]
         ),
         # Launch web_video_server
-        Node(
-            package='web_video_server',
-            executable='web_video_server',
-            name='web_video_server',
-            output='screen',
-            parameters=[
-                {'topic': '/oakd/rgb/preview/image_raw'}  # Specify the topic here
-            ]
-        )
+       Node(
+    package='web_video_server',
+   executable='web_video_server',
+   name='web_video_server',
+   output='screen',
+   parameters=[
+   {'topic': '/oakd/rgb/preview/image_raw/decompressed'},  # Use the compressed topic
+   {'jpeg_quality': 30},  # Adjust quality to reduce bandwidth
+   {'fps': 5}             # Reduce frame rate if needed
+   ]
+)
     ])
