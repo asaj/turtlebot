@@ -10,15 +10,13 @@ Future work should include:
 - oauth instead of username/pw
 - run nginx on a separate machine
 
-## Step 1: Install Nginx
+## Step 1: Set up Nginx
 
-Make sure to review install.sh and nginx_default for any username and IP address changes
+Make sure to review nginx_setup.sh and nginx_default for any username and IP address changes
 
 ```bash
-# On your local machine
-./cloud/vm/gcpvm.sh ssh
 # On the VM
-./cloud/nginx/install.sh
+./nginx/nginx_setup.sh
 ```
 
 ## Step 2: Adjust Firewall Rules
@@ -26,5 +24,7 @@ Make sure to review install.sh and nginx_default for any username and IP address
 You need to create firewall rules that allow the VM to accept HTTP and HTTPS traffic
 
 ```bash
-./http_firewall.sh
+# On your local machine, in the ros-vm repo
+cd ~/ros-vm
+./nginx_firewall.sh
 ```
