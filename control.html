@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Robot Controller with PS4 Controller Input</title>
+  </head>
+  <body>
+    <h1>Control the Robot with a PS4 Controller</h1>
+    <p>Status: <span id="status">Disconnected</span></p>
+
+    <!-- Input fields for username and password -->
+    <div>
+      <label for="username">Username:</label>
+      <input type="text" id="username" required />
+      <label for="password">Password:</label>
+      <input type="password" id="password" required />
+      <button id="connectButton">Connect to Robot</button>
+    </div>
+
+    <!-- Correct CDN link for roslibjs -->
+    <script src="https://cdn.jsdelivr.net/npm/roslib@1.3.0/build/roslib.min.js"></script>
+
+    <script>
+      let ros;
+      let joyTopic;
+      let isConnected = false;
+
+      // Mapping definitions
+      // 0 is open, 1 is close
+      const ps4ButtonIndices = {
+        cross: 0, // X button
+        circle: 1,
+        square: 2,
+        triangle: 3,
+        l1: 4,
+        r1: 5,
+        l2: 6,
+        r2: 7,
+        share: 8, // Select
+        options: 9, // Start
+        l3: 10,
+        r3: 11,
+        dpad_up: 12,
+        dpad_down: 13,
+        dpad_left: 14,
+        dpad_right: 15,
+        ps: 16,
+        touchpad: 17,
+      };
+
+      const locobotButtonIndices = {
+        GRIPPER_PWM_DEC: 0,
+        GRIPPER_OPEN: 1,
+        GRIPPER_PWM_INC: 2,
+        GRIPPER_CLOSE: 3,
+        EE_Y_INC: 4,
+        EE_Y_DEC: 5,
+        WAIST_CCW: 6,
+        WAIST_CW: 7,
+        SLEEP_POSE: 8,
+        HOME_POSE: 9,
+        SWITCH: 10,
+        FLIP_EE_X: 11,
+        FLIP_EE_ROLL: 12,
+      };
+
+      const buttonFunctionToPS4ButtonName = {
+        GRIPPER_PWM_DEC: "cross", // X button
+        GRIPPER_OPEN: "circle",
+        GRIPPER_PWM_INC: "triangle",
+        GRIPPER_CLOSE: "square",
+        EE_Y_INC: "l1",
+        EE_Y_DEC: "r1",
+        WAIST_CCW: "l2",
+        WAIST_CW: "r2",
+        SLEEP_POSE: "share", // Select button
+        HOME_POSE: "options", // Start button
+        SWITCH: "touchpad",
+        FLIP_EE_X: "l3",
+        FLIP_EE_ROLL: "r3",
+      };
+
+      const locobotAxesIndices = {
+        EE_X: 0,
+        EE_Z: 1,
+        BASE_CCW: 2,
+        EE_ROLL: 3,
+        EE_PITCH: 4,
+        BASE_CW: 5,
+        //SPEED_TYPE: 6,
+        //SPEED: 7,
+      };
+
+      const axesFunctionToPS4Input = {
+        EE_X: "left_stick_horizontal",
+        EE_Z: "left_stick_vertical",
+        EE_ROLL: "right_stick_horizontal",
+        EE_PITCH: "right_stick_vertical",
+        BASE_CCW: "l2",
+        BASE_CW: "r2",
+      };
+
+      const ps4AxesIndices = {
+        left_stick_horizontal: 0,
+        left_stick_vertical: 1,
+        right_stick_horizontal: 2,
+        right_stick_vertical: 3,
+      };
+
+      // Function to connect to rosbridge_server
+      function connect() {
+        console.log("attempting to connect");
+        if (isConnected) {
+          console.log("Already connected.");
+          return;
+        }
+
+        const username = document.getElementById("username").value;
+        const password = document.getElementById("password").value;
+        const vm_ip = "34.171.167.216";
+
+        // Construct the WebSocket URL with credentials
+        const url = `ws://${username}:${password}@${vm_ip}`;
+
+        ros = new ROSLIB.Ros({
+          url: url,
+        });
+
+        ros.on("connection", () => {
+          document.getElementById("status").innerText = "Connected";
+          console.log("Connected to rosbridge_server.");
+          isConnected = true;
+          setupController();
+        });
+
+        ros.on("error", (error) => {
+          document.getElementById("status").innerText = "Error";
+          console.error(error);
+          isConnected = false;
+        });
+
+        ros.on("close", () => {
+          document.getElementById("status").innerText = "Disconnected";
+          isConnected = false;
+        });
+
+        // Define the /joy topic for sensor_msgs/Joy messages
+        joyTopic = new ROSLIB.Topic({
+          ros: ros,
+          name: "/locobot/commands/joy_raw",
+          messageType: "sensor_msgs/Joy",
+        });
+      }
+
+      function mapButtons(gpButtons) {
+        const buttons = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+
+        for (let i = 0; i <= 12; i++) {
+          const locobotFunction = Object.keys(locobotButtonIndices).find(
+            (key) => locobotButtonIndices[key] === i
+          );
+
+          if (locobotFunction) {
+            const ps4ButtonName =
+              buttonFunctionToPS4ButtonName[locobotFunction];
+            const ps4ButtonIndex = ps4ButtonIndices[ps4ButtonName];
+
+            if (ps4ButtonIndex !== undefined && gpButtons[ps4ButtonIndex]) {
+              buttons[i] = gpButtons[ps4ButtonIndex].pressed ? 1 : 0;
+            } else {
+              buttons[i] = 0;
+            }
+          } else {
+            buttons[i] = 0;
+          }
+        }
+        return buttons;
+      }
+
+      function mapAxes(gp) {
+        const axes = [0, 0, 0, 0, 0, 0, 0, 0];
+
+        // TODO: What goes in the last two slots?
+        for (let i = 0; i <= 5; i++) {
+          const locobotFunction = Object.keys(locobotAxesIndices).find(
+            (key) => locobotAxesIndices[key] === i
+          );
+
+          if (locobotFunction) {
+            const ps4InputName = axesFunctionToPS4Input[locobotFunction];
+
+            if (
+              ps4InputName.startsWith("left_stick") ||
+              ps4InputName.startsWith("right_stick")
+            ) {
+              const ps4AxisIndex = ps4AxesIndices[ps4InputName];
+              axes[i] = gp.axes[ps4AxisIndex] || 0;
+            } else if (ps4InputName === "l2" || ps4InputName === "r2") {
+              const ps4ButtonIndex = ps4ButtonIndices[ps4InputName];
+              axes[i] =
+                gp.buttons[ps4ButtonIndex] && gp.buttons[ps4ButtonIndex].pressed
+                  ? 1
+                  : 0;
+            } else {
+              axes[i] = 0;
+            }
+          } else {
+            axes[i] = 0;
+          }
+        }
+
+        return axes;
+      }
+
+      // Function to send Joy messages based on controller input
+      function sendJoyMessage(buttons, axes) {
+        const joyMessage = new ROSLIB.Message({
+          header: {
+            stamp: { sec: Math.floor(Date.now() / 1000), nanosec: 0 },
+            frame_id: "",
+          },
+          axes: axes,
+          buttons: buttons,
+        });
+        joyTopic.publish(joyMessage);
+      }
+
+      // Setup for PS4 controller input
+      function setupController() {
+        window.addEventListener("gamepadconnected", (event) => {
+          const gamepadIndex = event.gamepad.index;
+          console.log("Gamepad connected:", event.gamepad);
+
+          // Function to capture the gamepad state and publish to ROS
+          function gamepadLoop() {
+            const gp = navigator.getGamepads()[gamepadIndex];
+            if (gp) {
+              const buttons = mapButtons(gp.buttons);
+              const axes = mapAxes(gp);
+
+              // Publish the message every 50 ms
+              setTimeout(() => {
+                sendJoyMessage(buttons, axes);
+                requestAnimationFrame(gamepadLoop);
+              }, 50);
+            } else {
+              // No gamepad connected, try again
+              requestAnimationFrame(gamepadLoop);
+            }
+          }
+
+          gamepadLoop(); // Start the gamepad loop
+        });
+
+        // Also check if the gamepad is already connected
+        if (navigator.getGamepads()[0]) {
+          const event = { gamepad: navigator.getGamepads()[0] };
+          window.dispatchEvent(new Event("gamepadconnected", event));
+        }
+      }
+
+      // Add event listener to the connect button
+      document
+        .getElementById("connectButton")
+        .addEventListener("click", connect);
+    </script>
+  </body>
+</html>
