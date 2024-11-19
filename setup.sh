@@ -2,3 +2,4 @@
 sudo apt update
 sudo apt install ros-humble-turtlebot4-desktop
 sudo apt install ros-humble-rosbridge-server
+sudo apt install ros-humble-web-video-server

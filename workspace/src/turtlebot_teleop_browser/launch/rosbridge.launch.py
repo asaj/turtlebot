@@ -12,7 +12,7 @@ def generate_launch_description():
                 {
                     'qos_overrides': {
                         'publisher': {
-                            '/turtlebot/commands/joy_raw': {
+                            '/cmd_vel': {
                                 'durability': 'transient_local'
                             }
                         }
@@ -20,4 +20,14 @@ def generate_launch_description():
                 }
             ]
         ),
+        # Launch web_video_server
+        Node(
+            package='web_video_server',
+            executable='web_video_server',
+            name='web_video_server',
+            output='screen',
+            parameters=[
+                {'topic': '/oakd/rgb/preview/image_raw'}  # Specify the topic here
+            ]
+        )
     ])
