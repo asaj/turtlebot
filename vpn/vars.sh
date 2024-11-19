@@ -1,0 +1,6 @@
+#!/bin/bash
+WG_CONFIG="/etc/wireguard/wg0.conf"
+WG_INTERFACE="wg0"
+CLIENT_VPN_IP="10.8.0.2/32"
+SERVER_VPN_IP="10.8.0.1/24"
+LISTEN_PORT="51820"

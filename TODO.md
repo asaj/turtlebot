@@ -1,0 +1,4 @@
+- Get joystick control working by running the joy node on the VM
+- Run a rosbridge on the VM
+- nginx
+- Joy, video, rviz running in browser
