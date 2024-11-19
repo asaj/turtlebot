@@ -1,107 +1,109 @@
 <!DOCTYPE html>
 <html>
-<head>
-  <title>TurtleBot Teleoperation</title>
-  <script src="https://cdn.jsdelivr.net/npm/roslib/build/roslib.min.js"></script>
-</head>
-<body>
-  <h1>TurtleBot Teleoperation</h1>
+  <head>
+    <title>TurtleBot Teleoperation</title>
+    <script src="https://cdn.jsdelivr.net/npm/roslib/build/roslib.min.js"></script>
+  </head>
+  <body>
+    <h1>TurtleBot Teleoperation</h1>
 
-  <p>Status: <span id="status">Disconnected</span></p>
+    <p>Status: <span id="status">Disconnected</span></p>
 
-  <!-- User inputs for username and password -->
-  <div>
-    <label for="username">Username:</label>
-    <input type="text" id="username" required>
-    <label for="password">Password:</label>
-    <input type="password" id="password" required>
-    <button id="connect-button">Connect</button>
-  </div>
+    <!-- User inputs for username and password -->
+    <div>
+      <label for="username">Username:</label>
+      <input type="text" id="username" required />
+      <label for="password">Password:</label>
+      <input type="password" id="password" required />
+      <button id="connect-button">Connect</button>
+    </div>
 
-  <!-- Video feed -->
-  <img id="camera-feed" width="640" height="480" style="display:none;" />
+    <!-- Video feed -->
+    <img id="camera-feed" width="640" height="480" style="display: none" />
 
-  <script>
-    let ros;
+    <script>
+      let ros;
 
-    // Function to connect to rosbridge_server
-    function connect() {
-      const username = document.getElementById('username').value;
-      const password = document.getElementById('password').value;
+      // Function to connect to rosbridge_server
+      function connect() {
+        const username = document.getElementById("username").value;
+        const password = document.getElementById("password").value;
 
-      if (!username || !password) {
-        alert('Please enter both username and password');
-        return;
-      }
-
-      const rosbridgeUrl = `ws://${username}:${password}@34.121.19.168:9090`;
-
-      // Connect to rosbridge_server
-      ros = new ROSLIB.Ros({
-        url: rosbridgeUrl
-      });
-
-      ros.on('connection', () => {
-        document.getElementById('status').innerText = 'Connected';
-        console.log('Connected to rosbridge_server');
-
-        // Display the camera feed
-        const cameraFeed = document.getElementById('camera-feed');
-        cameraFeed.src = `http://${username}:${password}@34.121.19.168:8080/stream?topic=/camera/color/image_raw`;
-        cameraFeed.style.display = 'block';
-      });
-
-      ros.on('error', (error) => {
-        document.getElementById('status').innerText = 'Error';
-        console.error('Error connecting to rosbridge_server:', error);
-      });
-
-      ros.on('close', () => {
-        document.getElementById('status').innerText = 'Disconnected';
-        console.log('Disconnected from rosbridge_server');
-      });
-
-      // Create a publisher for /cmd_vel
-      const cmdVel = new ROSLIB.Topic({
-        ros: ros,
-        name: '/cmd_vel',
-        messageType: 'geometry_msgs/Twist'
-      });
-
-      // Function to send Twist messages
-      function publishTwist(linearX, angularZ) {
-        const twist = new ROSLIB.Message({
-          linear: { x: linearX, y: 0.0, z: 0.0 },
-          angular: { x: 0.0, y: 0.0, z: angularZ }
-        });
-        cmdVel.publish(twist);
-      }
-
-      // Keyboard control
-      document.addEventListener('keydown', (event) => {
-        switch (event.key) {
-          case 'ArrowUp':    // Move forward
-            publishTwist(0.5, 0.0);
-            break;
-          case 'ArrowDown':  // Move backward
-            publishTwist(-0.5, 0.0);
-            break;
-          case 'ArrowLeft':  // Rotate left
-            publishTwist(0.0, 0.5);
-            break;
-          case 'ArrowRight': // Rotate right
-            publishTwist(0.0, -0.5);
-            break;
+        if (!username || !password) {
+          alert("Please enter both username and password");
+          return;
         }
-      });
 
-      document.addEventListener('keyup', () => {
-        publishTwist(0.0, 0.0); // Stop the robot when no key is pressed
-      });
-    }
+        const rosbridgeUrl = `ws://${username}:${password}@34.121.19.168`;
 
-    // Add event listener to the connect button
-    document.getElementById('connect-button').addEventListener('click', connect);
-  </script>
-</body>
+        // Connect to rosbridge_server
+        ros = new ROSLIB.Ros({
+          url: rosbridgeUrl,
+        });
+
+        ros.on("connection", () => {
+          document.getElementById("status").innerText = "Connected";
+          console.log("Connected to rosbridge_server");
+
+          // Display the camera feed
+          const cameraFeed = document.getElementById("camera-feed");
+          cameraFeed.src = `http://${username}:${password}@34.121.19.168:8080/stream?topic=/camera/color/image_raw`;
+          cameraFeed.style.display = "block";
+        });
+
+        ros.on("error", (error) => {
+          document.getElementById("status").innerText = "Error";
+          console.error("Error connecting to rosbridge_server:", error);
+        });
+
+        ros.on("close", () => {
+          document.getElementById("status").innerText = "Disconnected";
+          console.log("Disconnected from rosbridge_server");
+        });
+
+        // Create a publisher for /cmd_vel
+        const cmdVel = new ROSLIB.Topic({
+          ros: ros,
+          name: "/cmd_vel",
+          messageType: "geometry_msgs/Twist",
+        });
+
+        // Function to send Twist messages
+        function publishTwist(linearX, angularZ) {
+          const twist = new ROSLIB.Message({
+            linear: { x: linearX, y: 0.0, z: 0.0 },
+            angular: { x: 0.0, y: 0.0, z: angularZ },
+          });
+          cmdVel.publish(twist);
+        }
+
+        // Keyboard control
+        document.addEventListener("keydown", (event) => {
+          switch (event.key) {
+            case "ArrowUp": // Move forward
+              publishTwist(0.5, 0.0);
+              break;
+            case "ArrowDown": // Move backward
+              publishTwist(-0.5, 0.0);
+              break;
+            case "ArrowLeft": // Rotate left
+              publishTwist(0.0, 0.5);
+              break;
+            case "ArrowRight": // Rotate right
+              publishTwist(0.0, -0.5);
+              break;
+          }
+        });
+
+        document.addEventListener("keyup", () => {
+          publishTwist(0.0, 0.0); // Stop the robot when no key is pressed
+        });
+      }
+
+      // Add event listener to the connect button
+      document
+        .getElementById("connect-button")
+        .addEventListener("click", connect);
+    </script>
+  </body>
 </html>
